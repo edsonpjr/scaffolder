@@ -45,15 +45,36 @@ const taskFormSchema = z.object({
   description: z.string().max(1000, 'Máximo de 1000 caracteres.').optional(),
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']),
   dueDate: z.string().optional(),
+  category: z.enum(['WORK', 'STUDY', 'PERSONAL', 'HEALTH', 'FINANCE', 'OTHER']).optional()
+  .or(z.literal('').transform(() => undefined)), // NOVO
 });
 
 type TaskFormValues = z.infer<typeof taskFormSchema>;
 
 const editTaskFormSchema = taskFormSchema.extend({
   status: z.enum(['PENDING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED']),
+   // category já é herdado de taskFormSchema como opcional
 });
 
 type EditTaskFormValues = z.infer<typeof editTaskFormSchema>;
+
+  const CATEGORY_LABELS: Record<string, string> = {
+    WORK:     'Trabalho',
+    STUDY:    'Estudos',
+    PERSONAL: 'Pessoal',
+    HEALTH:   'Saúde',
+    FINANCE:  'Finanças',
+    OTHER:    'Outros',
+  };
+
+  const CATEGORY_OPTIONS = [
+    { value: 'WORK',     label: 'Trabalho' },
+    { value: 'STUDY',    label: 'Estudos'  },
+    { value: 'PERSONAL', label: 'Pessoal'  },
+    { value: 'HEALTH',   label: 'Saúde'    },
+    { value: 'FINANCE',  label: 'Finanças' },
+    { value: 'OTHER',    label: 'Outros'   },
+  ];
 
 export function TasksPage() {
   const { isAdmin } = useAuth();
@@ -64,6 +85,7 @@ export function TasksPage() {
   const search = searchParams.get('search') || '';
   const statusFilter = searchParams.get('status') || '';
   const priorityFilter = searchParams.get('priority') || '';
+  const categoryFilter = searchParams.get('category') || ''; // NOVO
   const sortBy = searchParams.get('sortBy') || 'createdAt';
   const sortOrder = (searchParams.get('sortOrder') as 'asc' | 'desc') || 'desc';
 
@@ -94,6 +116,7 @@ export function TasksPage() {
         ...(search ? { search } : {}),
         ...(statusFilter ? { status: statusFilter as any } : {}),
         ...(priorityFilter ? { priority: priorityFilter as any } : {}),
+        ...(categoryFilter ? { category: categoryFilter as any } : {}), // NOVO
         sortBy: sortBy as any,
         sortOrder,
       });
@@ -301,6 +324,20 @@ export function TasksPage() {
               <option value="URGENT">Urgente</option>
             </select>
 
+            {/* Category Filter */}
+            <select
+              value={categoryFilter}
+              onChange={(e) => updateParams({ category: e.target.value || undefined, page: 1 })}
+              className="flex h-10 w-full rounded-md border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            >
+              <option value="">Todas as Categorias</option>
+              {CATEGORY_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+
             {/* Sorting */}
             <select
               value={`${sortBy}:${sortOrder}`}
@@ -332,12 +369,12 @@ export function TasksPage() {
         <EmptyState
           title="Nenhuma tarefa encontrada"
           description={
-            search || statusFilter || priorityFilter
+            search || statusFilter || priorityFilter || categoryFilter
               ? 'Nenhum registro corresponde aos filtros selecionados.'
               : 'Você ainda não possui tarefas criadas.'
           }
           action={
-            search || statusFilter || priorityFilter ? (
+            search || statusFilter || priorityFilter || categoryFilter ? (
               <Button
                 variant="outline"
                 size="sm"
@@ -373,6 +410,12 @@ export function TasksPage() {
                         <div className="flex items-center gap-1.5 shrink-0">
                           {getPriorityBadge(task.priority)}
                           {getStatusBadge(task.status)}
+                          {/* Badge de categoria — NOVO */}
+                          {task.category && (
+                            <span className="inline-flex items-center rounded-full bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-xs font-medium text-slate-600 dark:text-slate-300">
+                              {CATEGORY_LABELS[task.category] ?? task.category}
+                            </span>
+                          )}
                         </div>
                       </div>
 
@@ -563,6 +606,27 @@ export function TasksPage() {
                   </select>
                 </div>
 
+                {/* Campo de Categoria */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                    Categoria (opcional)
+                  </label>
+                  <select
+                    {...registerCreate('category')}
+                    className="flex h-10 w-full rounded-md border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                  >
+                    <option value="">Sem categoria</option>
+                    {CATEGORY_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                  {createErrors.category && (
+                    <span className="text-xs text-red-500">{createErrors.category.message}</span>
+                  )}
+                </div>
+
                 <Input
                   label="Data Limite"
                   type="date"
@@ -632,6 +696,7 @@ function EditTaskModal({
       priority: task.priority as any,
       status: task.status as any,
       dueDate: rawDue,
+      category: (task.category as any) || '', // NOVO
     },
   });
 
@@ -668,6 +733,7 @@ function EditTaskModal({
               description: data.description || undefined,
               priority: data.priority,
               status: data.status,
+              category: data.category || undefined, // NOVO
               dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : undefined,
             });
           })}
@@ -732,6 +798,28 @@ function EditTaskModal({
             {...register('dueDate')}
             error={errors.dueDate?.message}
           />
+
+          {/* Campo de Categoria */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              Categoria (opcional)
+            </label>
+            <select
+              disabled={isCompleted}
+              {...register('category')}
+              className="flex h-10 w-full rounded-md border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <option value="">Sem categoria</option>
+              {CATEGORY_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+            {errors.category && (
+              <span className="text-xs text-red-500">{errors.category.message}</span>
+            )}
+          </div>
 
           <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
             <Button type="button" variant="outline" size="sm" onClick={onClose}>
