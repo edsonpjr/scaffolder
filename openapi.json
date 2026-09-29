@@ -904,6 +904,23 @@
             }
           },
           {
+            "name": "category",
+            "required": false,
+            "in": "query",
+            "description": "Filtro por categoria",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "WORK",
+                "STUDY",
+                "PERSONAL",
+                "HEALTH",
+                "FINANCE",
+                "OTHER"
+              ]
+            }
+          },
+          {
             "name": "sortBy",
             "required": false,
             "in": "query",
@@ -1515,6 +1532,20 @@
             ],
             "default": "MEDIUM"
           },
+          "category": {
+            "type": "string",
+            "description": "Categoria da tarefa",
+            "enum": [
+              "WORK",
+              "STUDY",
+              "PERSONAL",
+              "HEALTH",
+              "FINANCE",
+              "OTHER"
+            ],
+            "example": "WORK",
+            "default": "OTHER"
+          },
           "dueDate": {
             "type": "string",
             "description": "Data de entrega limite (ISO 8601)",
@@ -1589,6 +1620,19 @@
               "URGENT"
             ],
             "example": "MEDIUM"
+          },
+          "category": {
+            "type": "string",
+            "description": "Categoria da tarefa",
+            "enum": [
+              "WORK",
+              "STUDY",
+              "PERSONAL",
+              "HEALTH",
+              "FINANCE",
+              "OTHER"
+            ],
+            "nullable": true
           },
           "dueDate": {
             "type": "object",
@@ -1685,6 +1729,19 @@
               "HIGH",
               "URGENT"
             ]
+          },
+          "category": {
+            "type": "string",
+            "description": "Categoria da tarefa (envie null para remover)",
+            "enum": [
+              "WORK",
+              "STUDY",
+              "PERSONAL",
+              "HEALTH",
+              "FINANCE",
+              "OTHER"
+            ],
+            "nullable": true
           },
           "dueDate": {
             "type": "string",
